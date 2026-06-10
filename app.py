@@ -98,8 +98,8 @@ def place_bet():
 
     if datetime.utcnow() >= match.lock_time:
         return jsonify({'success': False, 'message': '下注已截止'}), 400
-    if amount < 1 or amount > 30:
-        return jsonify({'success': False, 'message': '下注额度1-30积分'}), 400
+    if amount < 1 or amount > 300:
+        return jsonify({'success': False, 'message': '下注额度1-300积分'}), 400
     if user.points < amount:
         return jsonify({'success': False, 'message': '积分不足'}), 400
 

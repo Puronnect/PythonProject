@@ -33,7 +33,7 @@
                                 <p>赔率: <span class="badge bg-warning text-dark" id="odds-{{ option.id }}">{{ option.odds }}</span></p>
                                 <p>总下注: <span id="total-{{ option.id }}">{{ option.total_bet_amount }}</span> 积分</p>
                                 <div class="input-group mb-2">
-                                    <input type="number" class="form-control bet-amount" placeholder="1-30" min="1" max="30" id="amount-{{ option.id }}" oninput="updatePreview({{ option.id }})">
+                                    <input type="number" class="form-control bet-amount" placeholder="1-300" min="1" max="300" id="amount-{{ option.id }}" oninput="updatePreview({{ option.id }})">
                                     <button class="btn btn-success bet-btn" onclick="placeBet({{ option.id }})">下注</button>
                                 </div>
                                 <small class="text-info" id="preview-{{ option.id }}"></small>
@@ -98,8 +98,8 @@ function updatePreview(optionId) {
 function placeBet(optionId) {
     const amountInput = document.getElementById('amount-' + optionId);
     const amount = parseInt(amountInput.value);
-    if (amount < 1 || amount > 30) {
-        alert('下注额度1-30积分');
+    if (amount < 1 || amount > 300) {
+        alert('下注额度1-300积分');
         return;
     }
     if (!confirm(`确认下注 ${amount} 积分吗？`)) return;
@@ -125,7 +125,6 @@ setInterval(() => {
             const totalEl = document.getElementById('total-' + id);
             if (oddsEl) oddsEl.textContent = info.odds;
             if (totalEl) totalEl.textContent = info.total_bet;
-            // 刷新预览
             const amountInput = document.getElementById('amount-' + id);
             if (amountInput && amountInput.value) updatePreview(id);
         }
