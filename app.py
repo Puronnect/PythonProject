@@ -1,32 +1,46 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from functools import wraps
 from models import db, User, Match, MatchOption, Bet, PointTransaction
 from datetime import datetime
-from functools import wraps
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-change-this'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'a-very-secret-key-change-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/worldcup.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
+# ---------- 自定义登录工具（替代 flask-login） ----------
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('请先登录')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_admin:
+        if 'user_id' not in session:
+            flash('请先登录')
+            return redirect(url_for('login'))
+        user = User.query.get(session['user_id'])
+        if not user or not user.is_admin:
             flash('需要管理员权限')
             return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated_function
+
+# 注入 current_user 到所有模板
+@app.context_processor
+def inject_user():
+    if 'user_id' in session:
+        user = User.query.get(session['user_id'])
+        return dict(current_user=user)
+    return dict(current_user=None)
 
 # ---------- 首页 ----------
 @app.route('/')
@@ -57,22 +71,22 @@ def place_bet():
 
     option = MatchOption.query.get_or_404(option_id)
     match = option.match
+    user = User.query.get(session['user_id'])
 
     if datetime.utcnow() >= match.lock_time:
         return jsonify({'success': False, 'message': '下注已截止'}), 400
     if amount < 1 or amount > 30:
         return jsonify({'success': False, 'message': '下注额度1-30积分'}), 400
-    if current_user.points < amount:
+    if user.points < amount:
         return jsonify({'success': False, 'message': '积分不足'}), 400
 
-    # 扣积分
-    current_user.points -= amount
-    current_user.total_bet_amount += amount   # 统计总下注
-    current_user.bet_count += 1
+    user.points -= amount
+    user.total_bet_amount += amount
+    user.bet_count += 1
 
-    bet = Bet(user_id=current_user.id, match_id=match.id, option_id=option_id, amount=amount)
+    bet = Bet(user_id=user.id, match_id=match.id, option_id=option_id, amount=amount)
     transaction = PointTransaction(
-        user_id=current_user.id,
+        user_id=user.id,
         amount=-amount,
         reason=f'下注 {match.title} - {option.option_name}'
     )
@@ -84,7 +98,7 @@ def place_bet():
     return jsonify({
         'success': True,
         'message': f'成功下注 {amount} 积分',
-        'new_balance': current_user.points,
+        'new_balance': user.points,
         'new_odds': option.odds
     })
 
@@ -155,26 +169,25 @@ def login():
             user = User(username=username, password=password)
             db.session.add(user)
             db.session.commit()
-            login_user(user)
+            session['user_id'] = user.id   # 注册后自动登录
             return redirect(url_for('index'))
-        else:
+        else:   # 登录
             user = User.query.filter_by(username=username).first()
             if user and user.password == password:
-                login_user(user)
+                session['user_id'] = user.id
                 return redirect(url_for('index'))
             flash('用户名或密码错误')
     return render_template('login.html')
 
 @app.route('/logout')
-@login_required
 def logout():
-    logout_user()
+    session.pop('user_id', None)
     return redirect(url_for('index'))
 
-# ---------- 排行榜（盈利/胜率/下注次数） ----------
+# ---------- 排行榜 ----------
 @app.route('/leaderboard')
 def leaderboard():
-    sort_by = request.args.get('sort', 'profit')  # profit / win_rate / bets
+    sort_by = request.args.get('sort', 'profit')
     users = User.query.filter_by(is_admin=False).all()
     if sort_by == 'profit':
         users.sort(key=lambda u: (u.total_win_amount - u.total_bet_amount), reverse=True)
@@ -188,8 +201,9 @@ def leaderboard():
 @app.route('/profile')
 @login_required
 def profile():
-    bets = Bet.query.filter_by(user_id=current_user.id).order_by(Bet.bet_time.desc()).all()
-    transactions = PointTransaction.query.filter_by(user_id=current_user.id).order_by(PointTransaction.time.desc()).limit(50).all()
+    user = User.query.get(session['user_id'])
+    bets = Bet.query.filter_by(user_id=user.id).order_by(Bet.bet_time.desc()).all()
+    transactions = PointTransaction.query.filter_by(user_id=user.id).order_by(PointTransaction.time.desc()).limit(50).all()
     return render_template('profile.html', bets=bets, transactions=transactions)
 
 # ---------- 管理后台 ----------
@@ -198,10 +212,9 @@ def profile():
 @admin_required
 def admin():
     matches = Match.query.order_by(Match.start_time.desc()).all()
-    # 统计数据
     total_users = User.query.filter_by(is_admin=False).count()
     total_bets_amount = db.session.query(db.func.sum(Bet.amount)).scalar() or 0
-    platform_fee = int(total_bets_amount * 0.05)   # 5% 手续费
+    platform_fee = int(total_bets_amount * 0.05)
     return render_template('admin.html',
                            matches=matches,
                            total_users=total_users,
@@ -246,30 +259,21 @@ def adjust_points():
     transaction = PointTransaction(
         user_id=user_id,
         amount=amount,
-        reason=f'管理员调整'   # 不带理由
+        reason='管理员调整'
     )
     db.session.add(transaction)
     db.session.commit()
     flash(f'已调整 {user.username} 积分 {amount:+d}')
     return redirect(url_for('admin_users'))
 
-# 初始化管理员
-def create_admin():
-    with app.app_context():
-        db.create_all()
-        if not User.query.filter_by(username='admin').first():
-            admin = User(username='admin', password='admin123', is_admin=True, points=999999)
-            db.session.add(admin)
-            db.session.commit()
-            print('管理员账号：admin / admin123')
-
-# 初始化数据库和管理员（本地和线上都会执行）
+# ---------- 初始化数据库和默认管理员 ----------
 with app.app_context():
     db.create_all()
     if not User.query.filter_by(username='admin').first():
-        admin = User(username='admin', password='admin123', is_admin=True, points=999999)
-        db.session.add(admin)
+        admin_user = User(username='admin', password='admin123', is_admin=True, points=999999)
+        db.session.add(admin_user)
         db.session.commit()
+        print('默认管理员已创建：admin / admin123')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
