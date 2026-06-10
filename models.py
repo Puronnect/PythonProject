@@ -41,6 +41,7 @@ class Match(db.Model):
     is_settled = db.Column(db.Boolean, default=False)
     winning_option = db.Column(db.String(100))
     options = db.relationship('MatchOption', backref='match', lazy=True)
+    bets = db.relationship('Bet', backref='match', lazy=True)   # ← 添加这一行
 
 class MatchOption(db.Model):
     id = db.Column(db.Integer, primary_key=True)
