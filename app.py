@@ -6,7 +6,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'a-very-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/worldcup.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:////tmp/worldcup.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
