@@ -3,6 +3,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from models import db, User, Match, MatchOption, Bet, PointTransaction
 from datetime import datetime
 from functools import wraps
+import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-this'
@@ -264,4 +265,4 @@ def create_admin():
 
 if __name__ == '__main__':
     create_admin()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
