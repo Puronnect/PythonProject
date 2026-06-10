@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h2>{{ match.title }}</h2>
+        <p class="text-muted">{{ match.description }}</p>
+        <div class="card bg-dark-card">
+            <div class="card-body">
+                <h5>比赛信息</h5>
+                <p>开始时间: {{ match.start_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                <p>下注截止: {{ match.lock_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                <p>状态:
+                    {% if match.is_settled %}
+                    <span class="badge bg-secondary">已结束</span>
+                    {% elif now < match.lock_time %}
+                    <span class="badge bg-success">下注中</span>
+                    {% else %}
+                    <span class="badge bg-warning">进行中</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        {% if can_bet and current_user.is_authenticated %}
+        <div class="card bg-dark-card">
+            <div class="card-body">
+                <h5>下注</h5>
+                <div class="row" id="betting-options">
+                    {% for option in match.options %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card option-card bg-dark-secondary">
+                            <div class="card-body text-center">
+                                <h4>{{ option.option_name }}</h4>
+                                <p>赔率: <span class="badge bg-warning text-dark" id="odds-{{ option.id }}">{{ option.odds }}</span></p>
+                                <p>总下注: <span id="total-{{ option.id }}">{{ option.total_bet_amount }}</span> 积分</p>
+                                <div class="input-group mb-2">
+                                    <input type="number" class="form-control bet-amount" placeholder="1-30" min="1" max="30" id="amount-{{ option.id }}" oninput="updatePreview({{ option.id }})">
+                                    <button class="btn btn-success bet-btn" onclick="placeBet({{ option.id }})">下注</button>
+                                </div>
+                                <small class="text-info" id="preview-{{ option.id }}"></small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% elif not current_user.is_authenticated %}
+        <div class="alert alert-warning">请先<a href="/login">登录</a>参与下注</div>
+        {% endif %}
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-dark-card">
+            <div class="card-body">
+                <h5>我的下注记录</h5>
+                {% if current_user.is_authenticated %}
+                {% set my_bets = match.bets|selectattr('user_id', 'equalto', current_user.id)|list %}
+                {% if my_bets %}
+                <ul class="list-group">
+                    {% for bet in my_bets %}
+                    <li class="list-group-item bg-dark-secondary d-flex justify-content-between align-items-center">
+                        {{ bet.option.option_name }}
+                        <span class="badge bg-primary rounded-pill">{{ bet.amount }} 积分</span>
+                        {% if bet.is_settled %}
+                            {% if bet.win_amount > 0 %}
+                            <span class="badge bg-success">+{{ bet.win_amount }}</span>
+                            {% else %}
+                            <span class="badge bg-danger">-{{ bet.amount }}</span>
+                            {% endif %}
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p>暂无下注</p>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updatePreview(optionId) {
+    const amount = document.getElementById('amount-' + optionId).value;
+    const oddsText = document.getElementById('odds-' + optionId).textContent;
+    const odds = parseFloat(oddsText);
+    const preview = document.getElementById('preview-' + optionId);
+    if (amount && odds) {
+        const win = Math.floor(amount * odds);
+        preview.textContent = '预计赢得: ' + win + ' 积分';
+    } else {
+        preview.textContent = '';
+    }
+}
+
+function placeBet(optionId) {
+    const amountInput = document.getElementById('amount-' + optionId);
+    const amount = parseInt(amountInput.value);
+    if (amount < 1 || amount > 30) {
+        alert('下注额度1-30积分');
+        return;
+    }
+    if (!confirm(`确认下注 ${amount} 积分吗？`)) return;
+    fetch('/api/bet', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ option_id: optionId, amount: amount })
+    })
+    .then(r => r.json())
+    .then(data => {
+        alert(data.message);
+        if (data.success) location.reload();
+    });
+}
+
+// 每10秒更新赔率
+setInterval(() => {
+    fetch('/api/odds/{{ match.id }}')
+    .then(r => r.json())
+    .then(data => {
+        for (const [id, info] of Object.entries(data)) {
+            const oddsEl = document.getElementById('odds-' + id);
+            const totalEl = document.getElementById('total-' + id);
+            if (oddsEl) oddsEl.textContent = info.odds;
+            if (totalEl) totalEl.textContent = info.total_bet;
+            // 刷新预览
+            const amountInput = document.getElementById('amount-' + id);
+            if (amountInput && amountInput.value) updatePreview(id);
+        }
+    });
+}, 10000);
+</script>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card bg-dark-card">
+            <div class="card-body">
+                <h3>登录 / 注册</h3>
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">用户名</label>
+                        <input type="text" class="form-control" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">密码</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                    <div class="mb-3" id="confirm-group" style="display:none;">
+                        <label class="form-label">确认密码</label>
+                        <input type="password" class="form-control" name="confirm_password">
+                    </div>
+                    <div class="d-grid gap-2 d-flex">
+                        <button type="submit" name="action" value="login" class="btn btn-primary flex-fill" onclick="return confirmAction('login')">登录</button>
+                        <button type="submit" name="action" value="register" class="btn btn-success flex-fill" onclick="return confirmAction('register')">注册</button>
+                    </div>
+                </form>
+                <div class="mt-3"><small class="text-muted">新用户积分为0，联系管理员充值</small></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function confirmAction(action) {
+    if (action === 'register') {
+        document.getElementById('confirm-group').style.display = 'block';
+        const pwd = document.querySelector('input[name="password"]').value;
+        const confirm = document.querySelector('input[name="confirm_password"]').value;
+        if (pwd !== confirm) {
+            alert('两次密码不一致');
+            return false;
+        }
+    } else {
+        document.getElementById('confirm-group').style.display = 'none';
+    }
+    return true;
+}
+</script>
+{% endblock %}

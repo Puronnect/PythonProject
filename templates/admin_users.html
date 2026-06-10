@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>用户积分管理</h2>
+<a href="/admin" class="btn btn-secondary mb-3">← 返回</a>
+<table class="table table-dark table-striped">
+    <thead><tr><th>用户名</th><th>当前积分</th><th>操作</th></tr></thead>
+    <tbody>
+        {% for u in users %}
+        <tr>
+            <td>{{ u.username }}</td>
+            <td>{{ u.points }}</td>
+            <td>
+                <form action="/admin/adjust_points" method="POST" class="d-flex">
+                    <input type="hidden" name="user_id" value="{{ u.id }}">
+                    <input type="number" name="amount" class="form-control form-control-sm me-2" placeholder="积分" required>
+                    <button type="submit" class="btn btn-sm btn-primary">调整</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

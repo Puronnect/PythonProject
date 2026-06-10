@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>管理后台</h2>
+<!-- 统计总览 -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-dark-card text-white">
+            <div class="card-body">
+                <h5>用户总数</h5>
+                <p class="display-6">{{ total_users }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-dark-card text-white">
+            <div class="card-body">
+                <h5>总下注额</h5>
+                <p class="display-6">{{ total_bets_amount }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-dark-card text-white">
+            <div class="card-body">
+                <h5>平台手续费 (5%)</h5>
+                <p class="display-6">{{ platform_fee }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card bg-dark-card">
+            <div class="card-body">
+                <h5>创建比赛</h5>
+                <form action="/admin/create_match" method="POST">
+                    <div class="mb-3"><label>标题</label><input type="text" class="form-control" name="title" required></div>
+                    <div class="mb-3"><label>描述</label><textarea class="form-control" name="description"></textarea></div>
+                    <div class="mb-3"><label>开始时间</label><input type="datetime-local" class="form-control" name="start_time" required></div>
+                    <div class="mb-3"><label>下注截止</label><input type="datetime-local" class="form-control" name="lock_time" required></div>
+                    <div class="mb-3"><label>结果选项</label>
+                        <div id="options-container">
+                            <input type="text" class="form-control mb-2" name="options[]" placeholder="选项1" required>
+                            <input type="text" class="form-control mb-2" name="options[]" placeholder="选项2" required>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addOption()">+ 添加</button>
+                    </div>
+                    <button type="submit" class="btn btn-primary">创建</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card bg-dark-card">
+            <div class="card-body">
+                <h5>结算比赛</h5>
+                <select class="form-select mb-3" id="settle-match-select">
+                    <option value="">选择未结算的比赛</option>
+                    {% for m in matches if not m.is_settled %}
+                    <option value="{{ m.id }}">{{ m.title }}</option>
+                    {% endfor %}
+                </select>
+                <div id="settle-options"></div>
+                <button class="btn btn-warning mt-2" onclick="settleMatch()">结算</button>
+            </div>
+        </div>
+        <div class="card bg-dark-card mt-3">
+            <div class="card-body">
+                <h5>用户管理</h5>
+                <a href="/admin/users" class="btn btn-info">管理积分</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function addOption(){
+    const div = document.getElementById('options-container');
+    const input = document.createElement('input');
+    input.type='text'; input.className='form-control mb-2'; input.name='options[]'; input.placeholder='新选项';
+    div.appendChild(input);
+}
+document.getElementById('settle-match-select').addEventListener('change', function(){
+    const matchId = this.value;
+    if(!matchId) return;
+    fetch('/api/odds/' + matchId)
+    .then(r => r.json())
+    .then(data => {
+        let html = '<p>选择获胜选项:</p>';
+        for(const [id, info] of Object.entries(data)){
+            html += `<div class="form-check"><input class="form-check-input" type="radio" name="winning-option" value="${id}"><label class="form-check-label">${info.name} (赔率: ${info.odds})</label></div>`;
+        }
+        document.getElementById('settle-options').innerHTML = html;
+    });
+});
+function settleMatch(){
+    const matchId = document.getElementById('settle-match-select').value;
+    const selected = document.querySelector('input[name="winning-option"]:checked');
+    if(!matchId || !selected){ alert('请选择比赛和获胜选项'); return; }
+    if(!confirm('确定结算？')) return;
+    fetch('/api/settle/' + matchId, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ winning_option_id: parseInt(selected.value) })
+    })
+    .then(r => r.json())
+    .then(data => { alert(data.message); if(data.success) location.reload(); });
+}
+</script>
+{% endblock %}

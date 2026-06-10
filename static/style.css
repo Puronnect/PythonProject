@@ -1,0 +1,36 @@
+body.dark-theme {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+.bg-dark-card {
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+}
+.bg-dark-secondary {
+    background-color: #2a2a2a;
+}
+.navbar-dark .navbar-brand, .navbar-dark .nav-link {
+    color: #f0f0f0 !important;
+}
+.card {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+.option-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.7);
+    border-color: #f0c040;
+}
+.bet-amount {
+    width: 70px !important;
+}
+.table-dark {
+    background-color: #1e1e1e;
+}
+a {
+    color: #80c0ff;
+}
+.btn-outline-light.active {
+    background-color: #f0c040;
+    border-color: #f0c040;
+    color: #000;
+}

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+</body>
+</html>
+
+{% extends "base.html" %}
+
+{% block content %}
+<h2>🏆 世界杯竞猜大赛</h2>
+
+{% if not current_user.is_authenticated %}
+<div class="alert alert-warning">
+    请先<a href="/login">登录</a>参与竞猜！
+</div>
+{% endif %}
+
+<!-- 进行中的比赛 -->
+{% if ongoing %}
+<h3 class="mt-4">🟢 进行中</h3>
+<div class="row">
+    {% for match in ongoing %}
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ match.title }}</h5>
+                <p class="card-text">{{ match.description }}</p>
+                <p>开始时间: {{ match.start_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                <a href="/match/{{ match.id }}" class="btn btn-primary">查看详情</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- 即将开始的比赛 -->
+{% if upcoming %}
+<h3 class="mt-4">🟡 即将开始</h3>
+<div class="row">
+    {% for match in upcoming %}
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ match.title }}</h5>
+                <p class="card-text">{{ match.description }}</p>
+                <p>开始时间: {{ match.start_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                <p>下注截止: {{ match.lock_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                <a href="/match/{{ match.id }}" class="btn btn-primary">下注竞猜</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- 已结束的比赛 -->
+{% if settled %}
+<h3 class="mt-4">🔴 已结束</h3>
+<div class="row">
+    {% for match in settled %}
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ match.title }}</h5>
+                <p class="card-text">{{ match.description }}</p>
+                {% set win_opt = match.options|selectattr('id', 'equalto', match.winning_option|int)|first %}
+                <p>获胜选项: <strong>{{ win_opt.option_name if win_opt else '未知' }}</strong></p>
+                <a href="/match/{{ match.id }}" class="btn btn-secondary">查看详情</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

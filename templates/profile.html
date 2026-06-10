@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+</body>
+</html>
+
+{% extends "base.html" %}
+
+{% block content %}
+<h2>个人中心 - {{ current_user.username }}</h2>
+<p>当前积分: <strong>{{ current_user.points }}</strong></p>
+
+<h3 class="mt-4">我的下注记录</h3>
+<table class="table">
+    <thead>
+        <tr>
+            <th>时间</th>
+            <th>比赛</th>
+            <th>选项</th>
+            <th>金额</th>
+            <th>结果</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for bet in bets %}
+        <tr>
+            <td>{{ bet.bet_time.strftime('%m-%d %H:%M') }}</td>
+            <td>{{ bet.option.match.title }}</td>
+            <td>{{ bet.option.option_name }}</td>
+            <td>{{ bet.amount }}</td>
+            <td>
+                {% if bet.is_settled %}
+                    {% if bet.win_amount > 0 %}
+                    <span class="text-success">+{{ bet.win_amount }}</span>
+                    {% else %}
+                    <span class="text-danger">-{{ bet.amount }}</span>
+                    {% endif %}
+                {% else %}
+                <span class="text-muted">未结算</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h3 class="mt-4">积分变动记录</h3>
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>时间</th>
+            <th>变动</th>
+            <th>原因</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for transaction in transactions %}
+        <tr>
+            <td>{{ transaction.time.strftime('%m-%d %H:%M') }}</td>
+            <td class="{% if transaction.amount > 0 %}text-success{% else %}text-danger{% endif %}">
+                {{ transaction.amount }}{% if transaction.amount > 0 %}+{% endif %}
+            </td>
+            <td>{{ transaction.reason }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
