@@ -4,6 +4,29 @@ from functools import wraps
 from models import db, User, Match, MatchOption, Bet, PointTransaction
 from datetime import datetime
 
+from functools import wraps
+from flask import jsonify, session
+
+# 专为 API 准备的登录检查（返回 JSON 错误，不重定向）
+def api_login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'message': '请先登录'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+def api_admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'message': '请先登录'}), 401
+        user = User.query.get(session['user_id'])
+        if not user or not user.is_admin:
+            return jsonify({'success': False, 'message': '需要管理员权限'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'a-very-secret-key-change-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:////tmp/worldcup.db')
