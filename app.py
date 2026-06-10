@@ -7,7 +7,7 @@ from functools import wraps
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-this'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///worldcup.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/worldcup.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -263,6 +263,13 @@ def create_admin():
             db.session.commit()
             print('管理员账号：admin / admin123')
 
+# 初始化数据库和管理员（本地和线上都会执行）
+with app.app_context():
+    db.create_all()
+    if not User.query.filter_by(username='admin').first():
+        admin = User(username='admin', password='admin123', is_admin=True, points=999999)
+        db.session.add(admin)
+        db.session.commit()
+
 if __name__ == '__main__':
-    create_admin()
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
