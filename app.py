@@ -1,9 +1,9 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models import db, User, Match, MatchOption, Bet, PointTransaction
 from datetime import datetime
 from functools import wraps
-import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-this'
