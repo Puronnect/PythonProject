@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>管理后台</h2>
+
 <!-- 统计总览 -->
 <div class="row mb-4">
     <div class="col-md-4">
@@ -27,6 +28,12 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- 工具按钮 -->
+<div class="mb-3">
+    <a href="/admin/users" class="btn btn-info">👥 管理积分</a>
+    <a href="/admin/download_backup" class="btn btn-warning">📥 备份数据库</a>
 </div>
 
 <div class="row">
@@ -65,15 +72,10 @@
                 <button class="btn btn-warning mt-2" onclick="settleMatch()">结算</button>
             </div>
         </div>
-        <div class="card bg-dark-card mt-3">
-            <div class="card-body">
-                <h5>用户管理</h5>
-                <a href="/admin/users" class="btn btn-info">管理积分</a>
-            </div>
-        </div>
     </div>
 </div>
 {% endblock %}
+
 {% block scripts %}
 <script>
 function addOption(){

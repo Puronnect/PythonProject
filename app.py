@@ -275,5 +275,17 @@ with app.app_context():
         db.session.commit()
         print('默认管理员已创建：admin / admin123')
 
+# ---------- 管理员下载数据库备份 ----------
+@app.route('/admin/download_backup')
+@login_required
+@admin_required
+def download_backup():
+    db_path = '/tmp/worldcup.db'
+    if not os.path.exists(db_path):
+        flash('数据库文件不存在')
+        return redirect(url_for('admin'))
+    from flask import send_file
+    return send_file(db_path, as_attachment=True, download_name='worldcup_backup.db')
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
